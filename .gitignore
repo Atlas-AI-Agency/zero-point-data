@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# env / secrets — never commit Stripe keys etc.
+.env
+.env.*
+*.local
+
+# logs / tmp
+*.log
+/tmp/
+.DS_Store
+
+# build output
+dist/
+build/
+
+# editor
+.vscode/
+.idea/

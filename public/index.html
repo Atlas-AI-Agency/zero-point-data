@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zero Point Data — Know When to Step Aside. Know When to Hold.</title>
+<meta name="description" content="Daily Bitcoin market regime analysis and allocation guidance. A transparent, data-driven risk index that evaluates momentum and capital flows to isolate distinct risk regimes — and shows you exactly why." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>Zero Point Data <small>· the signal</small></span>
+    </div>
+    <div class="nav-links">
+      <a href="#regimes">Regimes</a>
+      <a href="#track">Track Record</a>
+      <a href="#metrics">Metrics</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#pricing" class="btn btn-primary">Start Now</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow"><span class="pulse"></span> Welcome to Zero Point Data</span>
+      <h1>Know When to <span class="grad">Step Aside.</span><br/>Know When to Hold.</h1>
+      <p class="sub">A daily read on Bitcoin's market regime. Our engine evaluates momentum and capital flows to isolate distinct risk regimes — and shows you exactly <em>why</em>. The signal, and the data behind it.</p>
+      <div class="hero-cta">
+        <a href="#pricing" class="btn btn-primary btn-lg">Start Now</a>
+        <a href="#track" class="btn btn-ghost btn-lg">Download sample</a>
+      </div>
+      <p class="hero-note">The inflection is the signal. Markets move in regimes — we tell you which one you're in, and why.</p>
+    </div>
+
+    <!-- LIVE READ CARD (driven by the engine) -->
+    <div class="read-card" id="read">
+      <div class="read-head">
+        <span class="label">Today's Read</span>
+        <span class="live"><span class="pulse"></span> <span id="live-source">Live</span></span>
+      </div>
+      <div>
+        <div class="regime-badge"><span class="swatch" id="r-swatch"></span><span id="r-label">—</span></div>
+        <div class="regime-tag" id="r-tag">Loading the read…</div>
+      </div>
+
+      <div class="gauge">
+        <div class="gauge-track"><div class="gauge-needle" id="needle" style="left:50%"></div></div>
+        <div class="gauge-scale"><span>Strong Off −100</span><span>0</span><span>+100 Strong On</span></div>
+      </div>
+
+      <div class="alloc">
+        <div class="cell"><div class="k">BTC allocation</div><div class="v" id="btc-alloc">—<small>%</small></div></div>
+        <div class="cell"><div class="k">Cash allocation</div><div class="v" id="cash-alloc">—<small>%</small></div></div>
+      </div>
+
+      <div class="factors" id="factors"></div>
+
+      <div class="read-foot">
+        <span id="r-held">—</span>
+        <span id="r-stamp">—</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- REGIMES -->
+<section id="regimes">
+  <div class="wrap">
+    <span class="sec-eyebrow">Markets Move in Regimes</span>
+    <h2 class="sec-title reveal">Data-Driven Risk Architecture</h2>
+    <p class="sec-sub reveal">Four states based on global risk appetite. The engine reads where capital is rotating and how momentum is shifting, then classifies the market into one of four regimes — each with a clear allocation stance.</p>
+    <div class="regime-grid" id="regime-grid"></div>
+  </div>
+</section>
+
+<!-- TRACK RECORD -->
+<section id="track">
+  <div class="wrap">
+    <span class="sec-eyebrow">The Track Record</span>
+    <h2 class="sec-title reveal">24 Months. <span id="edge-headline">$206K</span> of Edge on a $100K Position.</h2>
+    <p class="sec-sub reveal">Following the regime signal versus an unhedged hold. Secure upside when the read is Risk-On; sidestep drawdown when it turns Risk-Off. The inflection is the signal.</p>
+    <div class="stats" id="stats">
+      <div class="stat reveal"><div class="num up" id="s-upside">$133K</div><div class="cap">Upside secured</div><div class="sub">4 Risk-On periods · $37K average per cycle</div></div>
+      <div class="stat reveal"><div class="num shield" id="s-draw">$73K</div><div class="cap">Drawdown protected</div><div class="sub">4 Risk-Off periods · up to $45K each</div></div>
+      <div class="stat reveal"><div class="num x" id="s-mult">2.07x</div><div class="cap">Cumulative edge</div><div class="sub">vs. unhedged hold · $100K base</div></div>
+    </div>
+
+    <div class="chart-wrap reveal">
+      <h5><span>BTC price · regime-shaded (last 365 days)</span><span id="chart-source"></span></h5>
+      <canvas id="chart" height="280"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS / FEATURES -->
+<section id="metrics">
+  <div class="wrap">
+    <span class="sec-eyebrow">The Metrics Behind the Edge</span>
+    <h2 class="sec-title reveal">The Read Tells You Exactly What to Do</h2>
+    <p class="sec-sub reveal">Get the charts, commentary, and research behind the signal — then act. Know the context. Execute the move.</p>
+    <div class="feature-row">
+      <div class="feature reveal"><div class="no">01.</div><h4>Risk-On &amp; Risk-Off Signal</h4><p>Daily regime detection isolating market confidence from structural weakness, with real-time alerts the moment the regime shifts.</p></div>
+      <div class="feature reveal"><div class="no">02.</div><h4>Bitcoin &amp; Cash Allocation</h4><p>A concrete BTC / Cash split for position sizing — derived directly from the active regime, not a vague sentiment score.</p></div>
+      <div class="feature reveal"><div class="no">03.</div><h4>Bitcoin Analysis</h4><p>Biweekly expert analysis across long, mid, and short-term metrics — the reasoning and research behind every read.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <span class="sec-eyebrow">Get Today's Read</span>
+    <h2 class="sec-title reveal">See Which Product Fits You Best</h2>
+    <div class="price-grid">
+      <div class="price-card feat reveal">
+        <span class="pill">Most popular</span>
+        <h3>Pro</h3>
+        <div class="price">$199<small>/mo</small></div>
+        <div class="bill">billed quarterly · or $149/mo annual</div>
+        <ul>
+          <li>✓ Daily Risk-On / Risk-Off regime signal</li>
+          <li>✓ BTC &amp; Cash allocation guidance</li>
+          <li>✓ Real-time alerts on regime shifts</li>
+          <li>✓ Full REST + WebSocket API access</li>
+          <li>✓ Downloadable signal history (CSV/Parquet)</li>
+        </ul>
+        <button class="btn btn-primary btn-lg" data-checkout>Subscribe now</button>
+        <p class="checkout-note" id="checkout-note"></p>
+      </div>
+      <div class="price-card reveal">
+        <h3>Enterprise</h3>
+        <div class="price">Custom</div>
+        <div class="bill">funds, family offices, desks</div>
+        <ul>
+          <li>✓ Everything in Pro</li>
+          <li>✓ High-rate API / WebSocket + SLA</li>
+          <li>✓ Bespoke &amp; multi-asset metrics</li>
+          <li>✓ Dedicated support &amp; onboarding</li>
+        </ul>
+        <a href="mailto:hello@zeropoint.data" class="btn btn-ghost btn-lg">Contact sales</a>
+      </div>
+    </div>
+
+    <!-- COMPARISON -->
+    <div class="cmp">
+      <div class="cmp-row cmp-head"><div class="rk">&nbsp;</div><div class="vec">Zero Point Data</div><div>Legacy signal services</div></div>
+      <div class="cmp-row"><div class="rk">Methodology</div><div>Published &amp; transparent</div><div>Opaque black box</div></div>
+      <div class="cmp-row alt"><div class="rk">Per-signal drivers</div><div>Always shown</div><div>Hidden</div></div>
+      <div class="cmp-row"><div class="rk">API access</div><div>REST + WebSocket included</div><div>None / enterprise-only</div></div>
+      <div class="cmp-row alt"><div class="rk">History export</div><div>CSV / Parquet, auditable</div><div>Not available</div></div>
+      <div class="cmp-row"><div class="rk">Entry price</div><div>$199/mo</div><div>$749+/mo</div></div>
+      <div class="cmp-row alt"><div class="rk">Best for</div><div>Quants who want to verify the edge</div><div>Taking the number on faith</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <span class="sec-eyebrow">FAQ</span>
+    <h2 class="sec-title reveal">Know the Context. Execute the Move.</h2>
+    <div class="faq">
+      <details open><summary>How is the signal delivered?</summary><p>The read is delivered daily through the dashboard and via real-time alerts. Each read includes the active regime, the BTC/Cash allocation stance, and the full factor breakdown driving the signal — alongside biweekly expert analysis.</p></details>
+      <details><summary>Can I unsubscribe at any time?</summary><p>Yes. Billing is quarterly and you can cancel renewal at any time — you retain access through the end of your current billing period.</p></details>
+      <details><summary>Can I access the data via API?</summary><p>Yes — and it's a core part of what we sell, not an afterthought. The regime score, allocation, and full factor series are available via our API (<code>/api/signal</code>) so you can automate directly against the read. Raw data exports (CSV/Parquet) are included too.</p></details>
+      <details><summary>Why should I trust the edge?</summary><p>Because you don't have to take our word for it. We publish the index construction, ship every signal with its driver attribution, and let you download the full historical signal log to audit the track record yourself. Transparency is the product.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-band">
+  <div class="wrap">
+    <span class="sec-eyebrow">Get Today's Read</span>
+    <h2 class="sec-title reveal">The inflection is the signal.</h2>
+    <div class="hero-cta">
+      <a href="#pricing" class="btn btn-primary btn-lg">Start Now</a>
+      <a href="#track" class="btn btn-ghost btn-lg">Download sample</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="row">
+      <div class="brand"><span class="dot"></span> Zero Point Data</div>
+      <div>© 2026 Zero Point Data · the signal, and the data behind it</div>
+    </div>
+    <p class="disclaimer">Zero Point Data provides data-driven market analytics for informational purposes only. Nothing here is financial, investment, or trading advice, or a recommendation to buy or sell any asset. Signals are model outputs that may be wrong. Past and backtested performance does not guarantee future results. You are solely responsible for your own decisions.</p>
+  </div>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

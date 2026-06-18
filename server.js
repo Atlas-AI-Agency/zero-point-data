@@ -1,0 +1,163 @@
+// Bitcoin Vector — minimal zero-dependency Node server.
+// Serves the static site and a /api/signal endpoint backed by the live engine.
+
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const { computeSignals, backtest } = require('./src/engine');
+const { stripeConfigured, createCheckoutSession } = require('./src/stripe');
+
+const PORT = process.env.PORT || 4317;
+const PUBLIC = path.join(__dirname, 'public');
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
+  '.ico': 'image/x-icon',
+};
+
+// ---- live data with cache + deterministic synthetic fallback --------------
+
+let cache = { at: 0, payload: null };
+const CACHE_MS = 5 * 60 * 1000;
+
+function fetchJSON(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'bitcoin-vector/1.0' } }, res => {
+      if (res.statusCode >= 300) { res.resume(); return reject(new Error('HTTP ' + res.statusCode)); }
+      let data = '';
+      res.on('data', d => (data += d));
+      res.on('end', () => { try { resolve(JSON.parse(data)); } catch (e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => req.destroy(new Error('timeout')));
+  });
+}
+
+// CoinGecko daily market chart (no key, free tier).
+async function fetchCandles() {
+  const url = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=730&interval=daily';
+  const j = await fetchJSON(url);
+  const prices = j.prices || [];
+  const volumes = j.total_volumes || [];
+  return prices.map((p, i) => ({
+    t: Math.floor(p[0] / 1000),
+    close: p[1],
+    volume: volumes[i] ? volumes[i][1] : 0,
+  }));
+}
+
+// Deterministic synthetic BTC-like series so the product always renders,
+// even fully offline. Uses a seeded PRNG (no Date/random nondeterminism).
+function syntheticCandles(n = 730) {
+  let seed = 1337;
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  const out = [];
+  let price = 28000;
+  const start = 1685577600; // fixed epoch (2023-06-01) for reproducibility
+  for (let i = 0; i < n; i++) {
+    const trend = Math.sin(i / 70) * 0.012 + Math.sin(i / 23) * 0.006;
+    const shock = (rand() - 0.5) * 0.05;
+    price = Math.max(15000, price * (1 + trend + shock));
+    out.push({ t: start + i * 86400, close: Math.round(price), volume: 2e10 * (0.6 + rand()) });
+  }
+  return out;
+}
+
+async function getSignal() {
+  if (cache.payload && Date.now() - cache.at < CACHE_MS) return cache.payload;
+  let candles, source;
+  try {
+    candles = await fetchCandles();
+    if (!candles || candles.length < 220) throw new Error('thin series');
+    source = 'coingecko';
+  } catch (e) {
+    candles = syntheticCandles();
+    source = 'synthetic';
+  }
+  const { series, latest, regimes } = computeSignals(candles);
+  const edge = backtest(series.slice(-730));
+  const payload = {
+    source,
+    generatedAt: new Date().toISOString(),
+    latest,
+    regimes,
+    edge,
+    series: series.slice(-365).map(s => ({ t: s.t, close: Math.round(s.close), score: s.score, regime: s.regime })),
+  };
+  cache = { at: Date.now(), payload };
+  return payload;
+}
+
+// ---- http ------------------------------------------------------------------
+
+const server = http.createServer(async (req, res) => {
+  const u = new URL(req.url, `http://${req.headers.host}`);
+
+  if (u.pathname === '/api/signal') {
+    try {
+      const payload = await getSignal();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(payload));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(e) }));
+    }
+    return;
+  }
+
+  // tells the frontend whether to show a real checkout button or a setup notice
+  if (u.pathname === '/api/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ stripeReady: stripeConfigured() }));
+    return;
+  }
+
+  // create a Stripe Checkout Session and hand back its hosted URL
+  if (u.pathname === '/api/checkout' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => (body += d));
+    req.on('end', async () => {
+      let email;
+      try { email = JSON.parse(body || '{}').email; } catch (e) {}
+      try {
+        const session = await createCheckoutSession({ email });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ url: session.url }));
+      } catch (e) {
+        const unconfigured = e.code === 'STRIPE_UNCONFIGURED';
+        res.writeHead(unconfigured ? 503 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          error: unconfigured
+            ? 'Checkout is not configured yet. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID (see SETUP-STRIPE.md).'
+            : String(e.message || e),
+        }));
+      }
+    });
+    return;
+  }
+
+  // static files
+  let p = u.pathname === '/' ? '/index.html' : u.pathname;
+  const file = path.join(PUBLIC, path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
+  fs.readFile(file, (err, buf) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not found');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+    res.end(buf);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Bitcoin Vector running on http://localhost:${PORT}`);
+});
