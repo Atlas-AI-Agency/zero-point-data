@@ -169,6 +169,22 @@ window.ZPD_DASH = window.ZPD_DASH || {};
     });
   }
 
+  // Expose boot so the theme toggle can re-render modules (they read theme
+  // colors from CSS vars at render time).
+  window.ZPD_DASH_BOOT = boot;
+
+  // Theme toggle (light default + dark), persisted.
+  var toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('zpd-theme', next); } catch (e) {}
+      boot(); // re-render so canvases/colors pick up the new theme
+    });
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

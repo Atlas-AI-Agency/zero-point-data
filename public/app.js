@@ -535,3 +535,27 @@ function renderInflectionCards(series) {
     URL.revokeObjectURL(url);
   });
 })();
+
+// ---- theme toggle ---------------------------------------------------------
+(function initTheme() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('zpd-theme', next); } catch (e) {}
+    // TONE was read once at load from CSS vars; refresh it for the new theme.
+    TONE.strong_on = getCss('--strong');
+    TONE.mild_on   = getCss('--mild');
+    TONE.mild_off  = getCss('--warn');
+    TONE.strong_off = getCss('--danger');
+    // re-render everything that bakes in colors (canvases read vars at draw time)
+    if (window.__signal) {
+      try { renderRead(window.__signal); } catch (e) {}
+      try { renderRegimes(window.__signal); } catch (e) {}
+      try { drawChart(window.__signal.series, window.__signal.regimes); } catch (e) {}
+      try { drawTimeline(window.__signal); } catch (e) {}
+    }
+  });
+})();
