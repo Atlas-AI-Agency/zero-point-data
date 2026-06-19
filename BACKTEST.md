@@ -20,11 +20,12 @@ allocation and compare it to naive buy-and-hold.
 
 ## Methodology
 
-1. **Load candles.** The runner tries the live CoinGecko daily series first
-   (same endpoint as the app server). If the network is unavailable, it falls
-   back to a **deterministic synthetic** generator (copied from the server) so
-   the backtest is fully reproducible offline. Force synthetic with
-   `ZPD_SYNTHETIC=1`.
+1. **Load candles.** The runner uses the hardened data feed's **deep history**
+   path (`getDeepCandles`) — Coinbase BTC-USD daily back to ~2015 — to get a
+   long, multi-cycle series (default **6 years**, set with `ZPD_YEARS`). If the
+   live fetch fails it falls back to the standard feed, then to a
+   **deterministic synthetic** generator so the backtest is reproducible
+   offline. Force synthetic with `ZPD_SYNTHETIC=1`.
 
 2. **Warm-up reservation.** The first `warmup` candles (default **210**) are
    reserved and never traded inside the test window. The engine's slowest factor
@@ -98,14 +99,30 @@ over-volatile series because there is more downside to dodge — so the syntheti
 backtest typically shows an **unrealistically large edge over buy-and-hold**.
 That number is an artifact of the generator, **not evidence the strategy works**.
 Use the synthetic run only to confirm the harness is wired correctly. For a
-meaningful (but still hypothetical) result, run online so live CoinGecko data is
+meaningful (but still hypothetical) result, run online so live Coinbase data is
 used.
+
+## Finding (real data, 6.5-year out-of-sample) — why we don't publish numbers yet
+
+Run on real Coinbase BTC/USD over ~6.5 years (2019→2026, 6 walk-forward
+segments), the strategy **underperforms buy-and-hold on total return**
+(~0.86×) — the whipsaw cost during strong bull legs outweighs the downside it
+dodges. Its genuine value is **risk reduction**: max drawdown ~54% vs ~77% for
+hold, and a higher Sharpe (~1.07 vs ~0.86).
+
+In short: **this is a risk-management overlay, not an alpha engine.** A short
+recent window (e.g. ~22 months) flatters it; the full multi-cycle record does
+not. Per that finding, we **do not publish performance figures on the public
+site** — the Track Record section describes methodology only, and
+`/api/v1/track-record` is gated (`ZPD_PUBLISH_TRACK_RECORD=1` to expose
+internally). We publish numbers when the model earns them.
 
 ## Running
 
 ```bash
-node src/backtest/run.js            # live data if available, else synthetic
-ZPD_SYNTHETIC=1 node src/backtest/run.js   # force the offline synthetic run
+node src/backtest/run.js                    # deep real data (6y), else synthetic
+ZPD_YEARS=8 node src/backtest/run.js        # deeper history
+ZPD_SYNTHETIC=1 node src/backtest/run.js    # force the offline synthetic run
 ```
 
 The runner prints a readable report to stdout and writes

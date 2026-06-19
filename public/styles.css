@@ -227,6 +227,8 @@ section { padding: 84px 0; border-top: 1px solid var(--border); }
 .stat .cap { color: var(--muted); margin-top: 6px; font-size: 14px; }
 .stat .sub { color: var(--muted-2); font-size: 13px; margin-top: 10px; }
 
+.tr-foot { margin-top: 22px; font-size: 12.5px; color: var(--muted-2); max-width: 720px; line-height: 1.6; }
+
 /* chart */
 .chart-wrap { margin-top: 40px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
 .chart-wrap h5 { font-size: 14px; color: var(--muted); font-weight: 500; margin-bottom: 14px; display: flex; justify-content: space-between; }

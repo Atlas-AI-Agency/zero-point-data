@@ -24,3 +24,6 @@ data/leads.json
 
 # runtime last-good market data cache
 data/last-good-candles.json
+
+# internal backtest artifact — withheld until numbers are publishable
+data/track-record.json
