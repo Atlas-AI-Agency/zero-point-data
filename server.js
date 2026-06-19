@@ -1,4 +1,4 @@
-// Bitcoin Vector — minimal zero-dependency Node server.
+// Zero Point Data — minimal zero-dependency Node server.
 // Serves the static site and a /api/signal endpoint backed by the live engine.
 
 const http = require('http');
@@ -7,6 +7,7 @@ const path = require('path');
 const https = require('https');
 const { computeSignals, backtest } = require('./src/engine');
 const { stripeConfigured, createCheckoutSession } = require('./src/stripe');
+const { createSampleReportHandler } = require('./src/sample-report');
 const api = require('./src/api');
 
 const PORT = process.env.PORT || 4317;
@@ -92,10 +93,27 @@ async function getSignal() {
     regimes,
     edge,
     series: series.slice(-365).map(s => ({ t: s.t, close: Math.round(s.close), score: s.score, regime: s.regime })),
+    // full untrimmed series kept server-side only (not sent to /api/signal
+    // clients) so the sample report can read factors/inflections/labels.
+    fullSeries: series,
   };
   cache = { at: Date.now(), payload };
   return payload;
 }
+
+// Full in-process signal (untrimmed series) for the sample report. Reuses the
+// same cache + synthetic fallback as getSignal without altering /api/signal.
+async function getFullSignal() {
+  if (cache.payload && Date.now() - cache.at < CACHE_MS) {
+    const p = cache.payload;
+    if (p.fullSeries) return { source: p.source, generatedAt: p.generatedAt, latest: p.latest, series: p.fullSeries };
+  }
+  await getSignal();
+  const p = cache.payload;
+  return { source: p.source, generatedAt: p.generatedAt, latest: p.latest, series: p.fullSeries };
+}
+
+const sampleReportHandler = createSampleReportHandler(getFullSignal);
 
 // ---- http ------------------------------------------------------------------
 
@@ -113,8 +131,9 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/signal') {
     try {
       const payload = await getSignal();
+      const { fullSeries, ...publicPayload } = payload; // keep heavy series server-side
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify(payload));
+      res.end(JSON.stringify(publicPayload));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(e) }));
@@ -150,6 +169,12 @@ const server = http.createServer(async (req, res) => {
         }));
       }
     });
+    return;
+  }
+
+  // email-gated sample report: capture lead + return a report from the engine
+  if (u.pathname === '/api/sample-report' && req.method === 'POST') {
+    sampleReportHandler(req, res);
     return;
   }
 

@@ -15,6 +15,9 @@ node_modules/
 dist/
 build/
 
+# captured leads (PII) — keep the dir, ignore the data
+data/leads.json
+
 # editor
 .vscode/
 .idea/

@@ -39,7 +39,7 @@
       <p class="sub">A daily read on Bitcoin's market regime. Our engine evaluates momentum and capital flows to isolate distinct risk regimes — and shows you exactly <em>why</em>. The signal, and the data behind it.</p>
       <div class="hero-cta">
         <a href="#pricing" class="btn btn-primary btn-lg">Start Now</a>
-        <a href="#track" class="btn btn-ghost btn-lg">Download sample</a>
+        <button type="button" class="btn btn-ghost btn-lg" data-sample>Download sample</button>
       </div>
       <p class="hero-note">The inflection is the signal. Markets move in regimes — we tell you which one you're in, and why.</p>
     </div>
@@ -187,10 +187,49 @@
     <h2 class="sec-title reveal">The inflection is the signal.</h2>
     <div class="hero-cta">
       <a href="#pricing" class="btn btn-primary btn-lg">Start Now</a>
-      <a href="#track" class="btn btn-ghost btn-lg">Download sample</a>
+      <button type="button" class="btn btn-ghost btn-lg" data-sample>Download sample</button>
     </div>
   </div>
 </section>
+
+<!-- SAMPLE REPORT MODAL -->
+<div class="modal-overlay" id="sample-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sample-title">
+    <button type="button" class="modal-close" data-sample-close aria-label="Close">&times;</button>
+
+    <!-- form view -->
+    <div id="sample-form-view">
+      <span class="sec-eyebrow">Free Sample Report</span>
+      <h3 id="sample-title">See a real read, built from today's signal.</h3>
+      <p class="modal-sub">Generated live from our engine — Daily Update, Multi-Horizon Analysis, and recent Flash Updates. No invented numbers.</p>
+      <form id="sample-form" novalidate>
+        <div class="field-row">
+          <label>First name
+            <input type="text" name="firstName" autocomplete="given-name" required />
+          </label>
+          <label>Last name
+            <input type="text" name="lastName" autocomplete="family-name" />
+          </label>
+        </div>
+        <label>Email
+          <input type="email" name="email" autocomplete="email" required />
+        </label>
+        <p class="form-error" id="sample-error" hidden></p>
+        <button type="submit" class="btn btn-primary btn-lg" id="sample-submit">Get my sample report</button>
+        <p class="fine-print">By submitting, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Notice</a>.</p>
+      </form>
+    </div>
+
+    <!-- report view -->
+    <div id="sample-report-view" hidden>
+      <div class="report-head">
+        <span class="sec-eyebrow">Sample Report</span>
+        <button type="button" class="btn btn-ghost report-download" id="sample-download">Download .txt</button>
+      </div>
+      <div id="sample-report-body"></div>
+    </div>
+  </div>
+</div>
 
 <footer class="footer">
   <div class="wrap">
