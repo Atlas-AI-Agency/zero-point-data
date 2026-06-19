@@ -178,6 +178,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // dashboard (the surface Pro subscribers log into) — clean URL -> the page.
+  // Its assets (/dashboard.css, /dashboard.js, /dash/*.js) resolve via static serving.
+  if (u.pathname === '/dashboard') {
+    const file = path.join(PUBLIC, 'dashboard.html');
+    return fs.readFile(file, (err, buf) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(buf);
+    });
+  }
+
   // static files
   let p = u.pathname === '/' ? '/index.html' : u.pathname;
   const file = path.join(PUBLIC, path.normalize(p).replace(/^(\.\.[/\\])+/, ''));

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard — Zero Point Data</title>
+<meta name="description" content="Zero Point Data dashboard — the current Bitcoin market-regime read, history, and signal attribution." />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body class="dash-body">
+
+<!-- TOP BAR -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>Zero Point Data <small>· dashboard</small></span>
+    </div>
+    <div class="nav-links">
+      <a href="/">← Back to site</a>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap dash-main">
+
+  <!-- PAGE TITLE -->
+  <header class="dash-header">
+    <span class="sec-eyebrow">Live</span>
+    <h1 class="dash-title">Dashboard</h1>
+  </header>
+
+  <!-- CURRENT READ SUMMARY STRIP -->
+  <!-- Filled by dashboard.js from /api/v1/signal/latest -->
+  <section class="dash-summary" id="dash-summary" aria-live="polite">
+    <div class="ds-item ds-regime">
+      <div class="ds-k">Current regime</div>
+      <div class="ds-v" id="ds-regime"><span class="ds-swatch" id="ds-swatch"></span><span id="ds-regime-label">Loading…</span></div>
+      <div class="ds-sub" id="ds-regime-tag"></div>
+    </div>
+    <div class="ds-item">
+      <div class="ds-k">Risk score</div>
+      <div class="ds-v ds-mono" id="ds-score">—</div>
+      <div class="ds-sub" id="ds-confidence"></div>
+    </div>
+    <div class="ds-item">
+      <div class="ds-k">BTC allocation</div>
+      <div class="ds-v ds-mono" id="ds-btc">—</div>
+      <div class="ds-sub">of portfolio</div>
+    </div>
+    <div class="ds-item">
+      <div class="ds-k">Cash allocation</div>
+      <div class="ds-v ds-mono" id="ds-cash">—</div>
+      <div class="ds-sub" id="ds-updated"></div>
+    </div>
+  </section>
+
+  <!-- MODULE MOUNT GRID -->
+  <div class="dash-grid">
+    <section id="dash-history"></section>
+    <section id="dash-attribution"></section>
+  </div>
+
+</main>
+
+<!-- Modules register themselves on window.ZPD_DASH, then the shell drives them. -->
+<script src="/dash/history.js"></script>
+<script src="/dash/attribution.js"></script>
+<script src="/dashboard.js"></script>
+
+</body>
+</html>
