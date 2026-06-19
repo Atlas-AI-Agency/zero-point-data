@@ -91,11 +91,10 @@ a { color: inherit; text-decoration: none; }
 }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
-.brand .dot {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: conic-gradient(from 200deg, var(--accent), var(--accent-2));
-  box-shadow: 0 0 20px var(--accent-glow);
-}
+.brand .mark { display: inline-flex; }
+.brand .mark svg { display: block; }
+/* the coordinate crosshair adapts to the theme; the vector keeps its gradient */
+.brand .mark .mark-axis { stroke: var(--muted-2); }
 .brand small { color: var(--muted); font-weight: 500; }
 .nav-links { display: flex; gap: 28px; align-items: center; }
 .nav-links a { color: var(--muted); font-size: 14px; transition: color .2s; }
