@@ -22,6 +22,7 @@
     <div class="nav-links">
       <a href="#regimes">Regimes</a>
       <a href="#track">Track Record</a>
+      <a href="#inflections">Inflections</a>
       <a href="#metrics">Metrics</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
@@ -101,6 +102,27 @@
       <h5><span>BTC price · regime-shaded (last 365 days)</span><span id="chart-source"></span></h5>
       <canvas id="chart" height="280"></canvas>
     </div>
+  </div>
+</section>
+
+<!-- INFLECTION POINTS -->
+<section id="inflections">
+  <div class="wrap">
+    <span class="sec-eyebrow">The Inflection Is the Signal</span>
+    <h2 class="sec-title reveal">Inflection Points Detected</h2>
+    <p class="sec-sub reveal">Every regime shift is a turning point. The engine shades BTC price by the active regime and flags the exact day the read flips — so you see the inflection the moment it happens, not weeks later.</p>
+
+    <div class="infl-wrap reveal">
+      <div class="infl-head">
+        <span>BTC price · regime-shaded timeline (last 365 days)</span>
+        <span id="infl-source"></span>
+      </div>
+      <canvas id="timeline" height="380"></canvas>
+      <div class="heat-strip" id="heat-strip" title="Per-day regime"></div>
+      <div class="infl-legend" id="infl-legend"></div>
+    </div>
+
+    <div class="infl-cards" id="infl-cards"></div>
   </div>
 </section>
 

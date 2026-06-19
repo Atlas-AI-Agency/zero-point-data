@@ -238,3 +238,58 @@ section { padding: 84px 0; border-top: 1px solid var(--border); }
 .center { text-align: center; }
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s, transform .7s; }
 .reveal.in { opacity: 1; transform: none; }
+
+/* ---------- inflection points timeline ---------- */
+.infl-wrap {
+  margin-top: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.infl-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 14px; color: var(--muted); font-weight: 500; margin-bottom: 14px;
+}
+.infl-head span:last-child { font-family: var(--mono); font-size: 12px; color: var(--muted-2); }
+#timeline { width: 100%; display: block; }
+
+.heat-strip {
+  display: flex; width: 100%; height: 14px; margin-top: 14px;
+  border-radius: 5px; overflow: hidden; border: 1px solid var(--border);
+}
+.heat-cell { flex: 1 1 0; min-width: 0; }
+
+.infl-legend {
+  display: flex; flex-wrap: wrap; gap: 18px 26px; margin-top: 16px;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+
+.infl-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px;
+}
+@media (max-width: 720px) { .infl-cards { grid-template-columns: 1fr; } }
+.infl-card {
+  position: relative; overflow: hidden;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px;
+}
+.infl-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--ic, var(--accent));
+}
+.infl-card.empty { opacity: .55; }
+.ic-head { display: flex; align-items: center; gap: 8px; }
+.ic-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--ic, var(--accent));
+  box-shadow: 0 0 0 0 var(--ic, var(--accent)); animation: pulse 2s infinite;
+}
+.ic-kind {
+  font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.ic-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 10px; color: var(--ic, var(--text)); }
+.ic-meta { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; gap: 12px; }
+.ic-regime { font-size: 13px; color: var(--muted); }
+.ic-date { font-family: var(--mono); font-size: 13px; color: var(--text); }
