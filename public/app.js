@@ -375,3 +375,163 @@ function renderInflectionCards(series) {
 
   wrap.innerHTML = card(lastOn, 'Risk-On') + card(lastOff, 'Risk-Off');
 }
+
+// ---- sample report modal --------------------------------------------------
+(function initSampleReport() {
+  const overlay = document.getElementById('sample-modal');
+  if (!overlay) return;
+  const formView = document.getElementById('sample-form-view');
+  const reportView = document.getElementById('sample-report-view');
+  const reportBody = document.getElementById('sample-report-body');
+  const form = document.getElementById('sample-form');
+  const submitBtn = document.getElementById('sample-submit');
+  const errEl = document.getElementById('sample-error');
+  let lastReport = null;
+  let lastTxt = '';
+
+  function open() {
+    formView.hidden = false;
+    reportView.hidden = true;
+    errEl.hidden = true;
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    const first = form.querySelector('input[name="firstName"]');
+    if (first) first.focus();
+  }
+  function close() {
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', open));
+  document.querySelectorAll('[data-sample-close]').forEach(b => b.addEventListener('click', close));
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) close(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errEl.hidden = true;
+    const fd = new FormData(form);
+    const payload = {
+      firstName: (fd.get('firstName') || '').trim(),
+      lastName: (fd.get('lastName') || '').trim(),
+      email: (fd.get('email') || '').trim(),
+    };
+    if (!payload.firstName) return showErr('Please enter your first name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return showErr('Please enter a valid email address.');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Building your report…';
+    try {
+      const res = await fetch('/api/sample-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.report) { showErr(data.error || 'Could not generate the report.'); return; }
+      lastReport = data.report;
+      lastTxt = reportToText(data.report);
+      renderReport(data.report);
+      formView.hidden = true;
+      reportView.hidden = false;
+    } catch (err) {
+      showErr('Network error — please try again.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Get my sample report';
+    }
+  });
+
+  function showErr(msg) { errEl.textContent = msg; errEl.hidden = false; }
+
+  const TONE_BY_REGIME = {
+    strong_on: getCss('--strong'), mild_on: getCss('--mild'),
+    mild_off: getCss('--warn'), strong_off: getCss('--danger'),
+  };
+
+  function renderReport(r) {
+    const d = r.sections.dailyUpdate;
+    const m = r.sections.multiHorizon;
+    const f = r.sections.flashUpdates;
+    const sign = n => (n > 0 ? '+' : '') + n;
+    const signalClass = d.signal === 'Risk-On' ? 'on' : 'off';
+
+    const flashRows = f.events.length
+      ? f.events.map(ev => `
+          <li>
+            <span class="flash-date">${ev.date}</span>
+            <span class="flash-swatch" style="background:${TONE_BY_REGIME[ev.to] || 'var(--muted)'}"></span>
+            <span class="flash-note">${ev.note}</span>
+          </li>`).join('')
+      : `<li class="flash-empty">${f.intro}</li>`;
+
+    reportBody.innerHTML = `
+      <div class="report-meta">${r.brand} · ${r.dataSource} · ${new Date(r.generatedAt).toUTCString().slice(5, 22)} UTC</div>
+
+      <div class="report-section">
+        <h4>${d.title}</h4>
+        <div class="report-grid">
+          <div class="rs-cell"><div class="rs-k">Active signal</div><div class="rs-v sig-${signalClass}">${d.signal}</div></div>
+          <div class="rs-cell"><div class="rs-k">Risk Index</div><div class="rs-v">${sign(d.riskIndex)}</div></div>
+          <div class="rs-cell"><div class="rs-k">BTC allocation</div><div class="rs-v">${d.btcAllocation}%</div></div>
+          <div class="rs-cell"><div class="rs-k">Cash allocation</div><div class="rs-v">${d.cashAllocation}%</div></div>
+        </div>
+        <p>${d.summary}</p>
+      </div>
+
+      <div class="report-section">
+        <h4>${m.title}</h4>
+        <p><strong>Long-term.</strong> ${m.longTerm}</p>
+        <p><strong>Mid-term.</strong> ${m.midTerm}</p>
+        <p><strong>Short-term.</strong> ${m.shortTerm}</p>
+      </div>
+
+      <div class="report-section">
+        <h4>${f.title}</h4>
+        <p class="flash-intro">${f.intro}</p>
+        <ul class="flash-list">${flashRows}</ul>
+      </div>
+
+      <p class="report-disclaimer">${r.disclaimer}</p>`;
+  }
+
+  function reportToText(r) {
+    const d = r.sections.dailyUpdate;
+    const m = r.sections.multiHorizon;
+    const f = r.sections.flashUpdates;
+    const sign = n => (n > 0 ? '+' : '') + n;
+    const lines = [];
+    lines.push(`${r.brand} — ${r.kind}`);
+    lines.push(`Generated: ${r.generatedAt} · source: ${r.dataSource}`);
+    lines.push('='.repeat(60), '');
+    lines.push(`[ ${d.title} ]`);
+    lines.push(`Active signal:    ${d.signal}`);
+    lines.push(`Risk Index:       ${sign(d.riskIndex)}`);
+    lines.push(`Regime:           ${d.regime} (${d.regimeTag}) — ${d.daysInRegime} day(s)`);
+    lines.push(`Allocation:       ${d.btcAllocation}% BTC / ${d.cashAllocation}% cash`);
+    lines.push('', d.summary, '');
+    lines.push(`[ ${m.title} ]`);
+    lines.push(`Long-term:  ${m.longTerm}`);
+    lines.push(`Mid-term:   ${m.midTerm}`);
+    lines.push(`Short-term: ${m.shortTerm}`, '');
+    lines.push(`[ ${f.title} ]`);
+    lines.push(f.intro);
+    f.events.forEach(ev => lines.push(`  ${ev.date}  ${ev.note}`));
+    lines.push('', '-'.repeat(60), r.disclaimer);
+    return lines.join('\n');
+  }
+
+  document.getElementById('sample-download').addEventListener('click', () => {
+    if (!lastReport) return;
+    const blob = new Blob([lastTxt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'zero-point-data-sample-report.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+})();
