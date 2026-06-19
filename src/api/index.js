@@ -164,14 +164,27 @@ function createHandler(getSignal) {
 
     const p = url.pathname;
 
-    // GET /api/v1/health — cheap liveness; still reports the data source.
+    // GET /api/v1/health — liveness + data-feed freshness (operator-facing).
     if (p === '/api/v1/health') {
-      let dataSource = 'unknown';
-      try { dataSource = (await getSignal()).source; } catch (e) {}
+      let dataSource = 'unknown', freshness = 'unknown', live = null, stale = null;
+      let dataAgeHours = null, dataAsOf = null, dataNote = null;
+      try {
+        const s = await getSignal();
+        dataSource = s.source; freshness = s.freshness; live = s.live; stale = s.stale;
+        dataAgeHours = s.dataAgeHours; dataAsOf = s.dataAsOf; dataNote = s.dataNote;
+      } catch (e) {}
+      // status reflects data health: degraded if serving stale/synthetic data.
+      const healthy = freshness === 'fresh' && dataSource !== 'synthetic';
       sendJSON(res, 200, {
-        status: 'ok',
+        status: healthy ? 'ok' : 'degraded',
         version: MODEL_VERSION,
         dataSource,
+        dataFreshness: freshness,
+        dataLive: live,
+        dataStale: stale,
+        dataAgeHours,
+        dataAsOf,
+        dataNote,
         auth: auth.authMode,
       }, rlHeaders);
       return true;

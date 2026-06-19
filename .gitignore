@@ -21,3 +21,6 @@ data/leads.json
 # editor
 .vscode/
 .idea/
+
+# runtime last-good market data cache
+data/last-good-candles.json

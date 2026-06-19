@@ -13,6 +13,15 @@ function getCss(v) {
 
 const FACTOR_LABELS = { momentum: 'Momentum', trend: 'Trend', flow: 'Capital Flow', volatility: 'Volatility' };
 
+// Real = any live market source (coingecko/coinbase/...), not the synthetic demo.
+function isRealData(data) { return data && data.source && data.source !== 'synthetic'; }
+function sourceLabel(data) {
+  if (!isRealData(data)) return 'source: synthetic demo series';
+  const src = data.source.charAt(0).toUpperCase() + data.source.slice(1);
+  if (data.stale) return 'source: ' + src + ' (last good · ' + (data.dataAgeHours ?? '?') + 'h old)';
+  return 'source: live BTC/USD · ' + src;
+}
+
 async function load() {
   let data;
   try {
@@ -25,10 +34,9 @@ async function load() {
   window.__signal = data;
   renderRead(data);
   renderRegimes(data);
-  // Only surface live-computed edge when backed by real market data; the
-  // synthetic demo series is too volatile to produce realistic figures, so we
-  // leave the reference track-record numbers in place.
-  if (data.source === 'coingecko') renderEdge(data.edge);
+  // Only surface live-computed edge when backed by REAL market data (any live
+  // source, not the synthetic demo series, which is too volatile to be honest).
+  if (isRealData(data)) renderEdge(data.edge);
   drawChart(data.series, data.regimes);
   drawTimeline(data);
 }
@@ -67,10 +75,10 @@ function renderRead(data) {
   }
 
   document.getElementById('r-held').textContent = l.daysInRegime + ' day' + (l.daysInRegime === 1 ? '' : 's') + ' in regime';
-  document.getElementById('live-source').textContent = data.source === 'coingecko' ? 'Live' : 'Demo data';
+  document.getElementById('live-source').textContent = !isRealData(data) ? 'Demo data' : (data.stale ? 'Last good' : 'Live');
   const d = new Date(data.generatedAt);
   document.getElementById('r-stamp').textContent = 'Updated ' + d.toUTCString().slice(5, 22) + ' UTC';
-  document.getElementById('chart-source').textContent = data.source === 'coingecko' ? 'source: live BTC/USD' : 'source: synthetic demo series';
+  document.getElementById('chart-source').textContent = sourceLabel(data);
 }
 
 function renderRegimes(data) {
@@ -228,7 +236,7 @@ function drawTimeline(data) {
 
   // source label
   const src = document.getElementById('infl-source');
-  if (src) src.textContent = data.source === 'coingecko' ? 'source: live BTC/USD' : 'source: synthetic demo series';
+  if (src) src.textContent = sourceLabel(data);
 
   // --- main canvas ---------------------------------------------------------
   const ctx = canvas.getContext('2d');
