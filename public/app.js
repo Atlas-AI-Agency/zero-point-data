@@ -30,6 +30,7 @@ async function load() {
   // leave the reference track-record numbers in place.
   if (data.source === 'coingecko') renderEdge(data.edge);
   drawChart(data.series, data.regimes);
+  drawTimeline(data);
 }
 
 function renderRead(data) {
@@ -198,10 +199,182 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
 window.addEventListener('resize', () => {
   // redraw chart on resize if data present
-  if (window.__signal) drawChart(window.__signal.series, window.__signal.regimes);
+  if (window.__signal) { drawChart(window.__signal.series, window.__signal.regimes); drawTimeline(window.__signal); }
 });
 
 load().then(() => {});
+
+// ---- Inflection Points timeline ------------------------------------------
+const REGIME_META = {
+  strong_off: { label: 'Strong Risk-Off', short: 'Risk-Off', alloc: 0,   css: '--danger' },
+  mild_off:   { label: 'Mild Risk-Off',   short: 'Risk-Off', alloc: 35,  css: '--warn'   },
+  mild_on:    { label: 'Mild Risk-On',    short: 'Risk-On',  alloc: 75,  css: '--mild'   },
+  strong_on:  { label: 'Strong Risk-On',  short: 'Risk-On',  alloc: 100, css: '--strong' },
+};
+const RISK_ON = new Set(['mild_on', 'strong_on']);
+const LEGEND_ORDER = ['strong_off', 'mild_off', 'mild_on', 'strong_on'];
+
+function fmtDate(t) {
+  const d = new Date(t * 1000);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+function drawTimeline(data) {
+  const series = data.series || [];
+  const canvas = document.getElementById('timeline');
+  if (!canvas || !series.length) return;
+
+  const tone = k => getCss(REGIME_META[k].css);
+
+  // source label
+  const src = document.getElementById('infl-source');
+  if (src) src.textContent = data.source === 'coingecko' ? 'source: live BTC/USD' : 'source: synthetic demo series';
+
+  // --- main canvas ---------------------------------------------------------
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = 380;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const padL = 56, padR = 14, padT = 16, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const prices = series.map(s => s.close);
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const span = max - min || 1;
+  const x = i => padL + (i / (series.length - 1)) * plotW;
+  const y = p => padT + plotH - ((p - min) / span) * plotH;
+
+  // regime background shading
+  for (let i = 1; i < series.length; i++) {
+    ctx.fillStyle = hexA(tone(series[i].regime), 0.09);
+    ctx.fillRect(x(i - 1), padT, x(i) - x(i - 1) + 1, plotH);
+  }
+
+  // price axis labels + horizontal gridlines
+  ctx.fillStyle = getCss('--muted-2');
+  ctx.font = '11px ' + getCss('--mono');
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const kfmt = v => v >= 1000 ? '$' + (v / 1000).toFixed(v >= 100000 ? 0 : 1) + 'k' : '$' + Math.round(v);
+  for (let g = 0; g <= 4; g++) {
+    const p = min + (span * g) / 4;
+    const yy = y(p);
+    ctx.strokeStyle = hexA(getCss('--border'), 0.6);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(W - padR, yy); ctx.stroke();
+    ctx.fillText(kfmt(p), padL - 8, yy);
+  }
+
+  // month gridlines + labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  let lastMonth = -1;
+  for (let i = 0; i < series.length; i++) {
+    const d = new Date(series[i].t * 1000);
+    const m = d.getUTCMonth();
+    if (m !== lastMonth) {
+      lastMonth = m;
+      const xx = x(i);
+      ctx.strokeStyle = hexA(getCss('--border-2'), 0.5);
+      ctx.beginPath(); ctx.moveTo(xx, padT); ctx.lineTo(xx, padT + plotH); ctx.stroke();
+      ctx.fillStyle = getCss('--muted-2');
+      ctx.fillText(d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }), xx, padT + plotH + 6);
+    }
+  }
+
+  // price line, colored by regime segment
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  for (let i = 1; i < series.length; i++) {
+    ctx.strokeStyle = tone(series[i].regime);
+    ctx.beginPath();
+    ctx.moveTo(x(i - 1), y(prices[i - 1]));
+    ctx.lineTo(x(i), y(prices[i]));
+    ctx.stroke();
+  }
+
+  // numbered inflection callouts (regime transitions)
+  const inflections = [];
+  for (let i = 1; i < series.length; i++) {
+    if (series[i].regime !== series[i - 1].regime) inflections.push(i);
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  inflections.forEach((idx, n) => {
+    const xx = x(idx), yy = y(prices[idx]);
+    const col = tone(series[idx].regime);
+    ctx.fillStyle = getCss('--bg');
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(xx, yy, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col;
+    ctx.font = '600 11px ' + getCss('--font');
+    ctx.fillText(String(n + 1), xx, yy + 0.5);
+  });
+
+  // --- per-day heatmap strip ----------------------------------------------
+  const strip = document.getElementById('heat-strip');
+  if (strip) {
+    strip.innerHTML = '';
+    for (const s of series) {
+      const cell = document.createElement('span');
+      cell.className = 'heat-cell';
+      cell.style.background = tone(s.regime);
+      cell.title = REGIME_META[s.regime].label + ' · ' + fmtDate(s.t);
+      strip.appendChild(cell);
+    }
+  }
+
+  // --- 4-state legend ------------------------------------------------------
+  const legend = document.getElementById('infl-legend');
+  if (legend) {
+    legend.innerHTML = '';
+    for (const k of LEGEND_ORDER) {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-swatch" style="background:${tone(k)}"></span><span>${REGIME_META[k].label}</span>`;
+      legend.appendChild(item);
+    }
+  }
+
+  // --- two "Inflection Detected" cards ------------------------------------
+  renderInflectionCards(series);
+}
+
+function renderInflectionCards(series) {
+  const wrap = document.getElementById('infl-cards');
+  if (!wrap) return;
+
+  // scan for most recent transition INTO risk-on and INTO risk-off
+  let lastOn = null, lastOff = null;
+  for (let i = 1; i < series.length; i++) {
+    const cur = RISK_ON.has(series[i].regime);
+    const prev = RISK_ON.has(series[i - 1].regime);
+    if (cur && !prev) lastOn = series[i];
+    if (!cur && prev) lastOff = series[i];
+  }
+
+  const card = (s, kind) => {
+    if (!s) {
+      return `<div class="infl-card empty"><div class="ic-tag">No ${kind} inflection in window</div></div>`;
+    }
+    const m = REGIME_META[s.regime];
+    const cls = RISK_ON.has(s.regime) ? 'on' : 'off';
+    const cashOrBtc = RISK_ON.has(s.regime)
+      ? `${m.alloc}% BTC`
+      : `${100 - m.alloc}% Cash`;
+    return `
+      <div class="infl-card ${cls}" style="--ic:${getCss(m.css)}">
+        <div class="ic-head"><span class="ic-dot"></span><span class="ic-kind">Inflection Detected</span></div>
+        <div class="ic-title">${m.short}, ${cashOrBtc}</div>
+        <div class="ic-meta"><span class="ic-regime">${m.label}</span><span class="ic-date">${fmtDate(s.t)}</span></div>
+      </div>`;
+  };
+
+  wrap.innerHTML = card(lastOn, 'Risk-On') + card(lastOff, 'Risk-Off');
+}
 
 // ---- sample report modal --------------------------------------------------
 (function initSampleReport() {
