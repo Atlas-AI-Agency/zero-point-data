@@ -17,6 +17,10 @@
 // ============================================================================
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+const TRACK_RECORD_FILE = path.join(__dirname, '..', '..', 'data', 'track-record.json');
 
 const MODEL_VERSION = '1.0.0';
 const DISCLAIMER = 'Informational only. Not financial advice.';
@@ -206,6 +210,28 @@ function createHandler(getSignal) {
         }, rlHeaders);
       } catch (e) {
         sendJSON(res, 502, { error: 'Upstream signal unavailable', detail: String(e.message || e) }, rlHeaders);
+      }
+      return true;
+    }
+
+    // GET /api/v1/track-record — the persisted walk-forward backtest artifact.
+    // GATED: not published publicly. The multi-cycle out-of-sample record shows
+    // the strategy underperforms buy-and-hold on return (its value is risk
+    // reduction, not alpha), so we withhold performance numbers until the model
+    // earns them. Set ZPD_PUBLISH_TRACK_RECORD=1 to expose internally.
+    if (p === '/api/v1/track-record') {
+      if (process.env.ZPD_PUBLISH_TRACK_RECORD !== '1') {
+        sendJSON(res, 403, {
+          error: 'Track record not published yet — in multi-cycle validation.',
+          disclaimer: DISCLAIMER,
+        }, rlHeaders);
+        return true;
+      }
+      try {
+        const raw = fs.readFileSync(TRACK_RECORD_FILE, 'utf8');
+        sendJSON(res, 200, JSON.parse(raw), rlHeaders);
+      } catch (e) {
+        sendJSON(res, 404, { error: 'No track record artifact. Run: node src/backtest/run.js', disclaimer: DISCLAIMER }, rlHeaders);
       }
       return true;
     }

@@ -34,9 +34,11 @@ async function load() {
   window.__signal = data;
   renderRead(data);
   renderRegimes(data);
-  // Only surface live-computed edge when backed by REAL market data (any live
-  // source, not the synthetic demo series, which is too volatile to be honest).
-  if (isRealData(data)) renderEdge(data.edge);
+  // NOTE: the public Track Record section intentionally shows illustrative
+  // copy, NOT live backtest numbers. The 6.5y out-of-sample record shows the
+  // strategy underperforms buy-and-hold on return (its value is risk reduction,
+  // not alpha), so we do not publish edge figures until the model earns them.
+  // The real artifact lives at data/track-record.json for internal review.
   drawChart(data.series, data.regimes);
   drawTimeline(data);
 }
@@ -105,14 +107,6 @@ function renderRegimes(data) {
   }
 }
 
-function renderEdge(edge) {
-  if (!edge) return;
-  const k = n => '$' + Math.round(n / 1000) + 'K';
-  document.getElementById('edge-headline').textContent = k(edge.totalEdge);
-  document.getElementById('s-upside').textContent = k(edge.upsideSecured);
-  document.getElementById('s-draw').textContent = k(edge.drawdownAvoided);
-  document.getElementById('s-mult').textContent = edge.multiple + 'x';
-}
 
 function drawChart(series, regimes) {
   const canvas = document.getElementById('chart');

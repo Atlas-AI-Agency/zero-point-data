@@ -4,9 +4,9 @@
 // ----------------------------------------------------------------------------
 // Usage:  node src/backtest/run.js
 //
-// Loads a daily BTC candle series (tries live CoinGecko first, falls back to a
-// deterministic synthetic generator so it runs fully offline), runs the
-// walk-forward harness across multiple out-of-sample segments, prints a
+// Loads a daily BTC candle series via the hardened production data feed
+// (CoinGecko -> Coinbase, with last-good cache and synthetic last resort), runs
+// the walk-forward harness across multiple out-of-sample segments, prints a
 // readable report to stdout, and writes data/track-record.json.
 //
 // ALL NUMBERS PRODUCED HERE ARE BACKTESTED / HYPOTHETICAL. The synthetic
@@ -17,73 +17,33 @@
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 const { walkForward } = require('./harness');
+const datafeed = require('../datafeed');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const OUT_FILE = path.join(DATA_DIR, 'track-record.json');
 
 // ---- data loading ----------------------------------------------------------
 
-function fetchJSON(url) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'zero-point-data/1.0' } }, res => {
-      if (res.statusCode >= 300) { res.resume(); return reject(new Error('HTTP ' + res.statusCode)); }
-      let data = '';
-      res.on('data', d => (data += d));
-      res.on('end', () => { try { resolve(JSON.parse(data)); } catch (e) { reject(e); } });
-    });
-    req.on('error', reject);
-    req.setTimeout(8000, () => req.destroy(new Error('timeout')));
-  });
-}
-
-// Live daily BTC market chart from CoinGecko (no key, free tier) — mirrors
-// server.js fetchCandles().
-async function fetchCandles() {
-  const url = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=730&interval=daily';
-  const j = await fetchJSON(url);
-  const prices = j.prices || [];
-  const volumes = j.total_volumes || [];
-  return prices.map((p, i) => ({
-    t: Math.floor(p[0] / 1000),
-    close: p[1],
-    volume: volumes[i] ? volumes[i][1] : 0,
-  }));
-}
-
-// Deterministic synthetic BTC-like series (copied from server.js so the
-// backtest runs offline and reproducibly). Seeded PRNG, no Date/Math.random.
-// NOTE: this series is intentionally MORE volatile than real BTC.
-function syntheticCandles(n = 730) {
-  let seed = 1337;
-  const rand = () => {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    return seed / 0x7fffffff;
-  };
-  const out = [];
-  let price = 28000;
-  const start = 1685577600; // fixed epoch (2023-06-01) for reproducibility
-  for (let i = 0; i < n; i++) {
-    const trend = Math.sin(i / 70) * 0.012 + Math.sin(i / 23) * 0.006;
-    const shock = (rand() - 0.5) * 0.05;
-    price = Math.max(15000, price * (1 + trend + shock));
-    out.push({ t: start + i * 86400, close: Math.round(price), volume: 2e10 * (0.6 + rand()) });
-  }
-  return out;
-}
-
+// Load candles via the hardened production data feed: multi-source
+// (CoinGecko -> Coinbase) with retries + last-good cache, and synthetic only as
+// a true last resort. This is the SAME feed the live product uses, so the
+// backtest runs on the same real data the signal is served from.
 async function loadCandles() {
   if (process.env.ZPD_SYNTHETIC === '1') {
-    return { candles: syntheticCandles(), source: 'synthetic' };
+    return { candles: datafeed.syntheticCandles(), source: 'synthetic' };
   }
-  try {
-    const candles = await fetchCandles();
-    if (!candles || candles.length < 220) throw new Error('thin series');
-    return { candles, source: 'coingecko' };
-  } catch (e) {
-    return { candles: syntheticCandles(), source: 'synthetic', loadError: String(e.message || e) };
-  }
+  // Deep history for a longer, more credible walk-forward (multiple cycles).
+  const years = Number(process.env.ZPD_YEARS) || 6;
+  const feed = await datafeed.getDeepCandles({ years });
+  return {
+    candles: feed.candles,
+    source: feed.source,
+    live: feed.live,
+    stale: feed.stale,
+    asOf: feed.asOf,
+    loadError: feed.source === 'synthetic' ? (feed.note || 'no live data available') : null,
+  };
 }
 
 // ---- formatting helpers ----------------------------------------------------
@@ -169,17 +129,18 @@ function printReport(result, source, loadError) {
 // ---- main ------------------------------------------------------------------
 
 async function main() {
-  const { candles, source, loadError } = await loadCandles();
+  const { candles, source, loadError, live, stale, asOf } = await loadCandles();
 
   const result = walkForward(candles, {
-    segments: 4,
-    warmup: 210,
+    segments: 6,
+    warmup: 220,
     costBps: 10,
     base: 100000,
   });
 
   printReport(result, source, loadError);
 
+  const isReal = source !== 'synthetic';
   const artifact = {
     schema: 'zero-point-data/track-record/v1',
     hypothetical: true,
@@ -188,10 +149,13 @@ async function main() {
       'No real capital was deployed. See BACKTEST.md.',
     generatedAt: new Date().toISOString(),
     dataSource: source,
+    real: isReal,                 // true when computed on live market data
+    dataAsOf: asOf ? new Date(asOf).toISOString() : null,
+    stale: stale || false,
     syntheticWarning:
-      source === 'synthetic'
-        ? 'Synthetic series is more volatile than real BTC; edge is an artifact of the generator, NOT a real track record.'
-        : null,
+      isReal
+        ? null
+        : 'Synthetic series is more volatile than real BTC; edge is an artifact of the generator, NOT a real track record.',
     loadError: loadError || null,
     meta: result.meta,
     segments: result.segments,

@@ -76,18 +76,20 @@ async function fromCoinGecko() {
 
 // 2) Coinbase — daily candles (granularity 86400). No key. Returns
 //    [time, low, high, open, close, volume] newest-first; we normalize.
-//    Coinbase caps ~300 candles/req, so we page backwards to cover ~2y.
-async function fromCoinbase() {
+//    Coinbase caps ~300 candles/req, so we page backwards. `pages` controls
+//    depth: 3 pages ≈ 870 days (live feed), 8 pages ≈ ~6.4y (deep backtest).
+async function fromCoinbase(pages = 3) {
   const granularity = 86400;
   const nowSec = Math.floor(Date.now() / 1000);
   const span = 290 * granularity; // stay under the ~300 cap per request
   const buckets = [];
   let end = nowSec;
-  for (let i = 0; i < 3; i++) { // 3 pages ≈ 870 days
+  for (let i = 0; i < pages; i++) {
     const start = end - span;
     const url = `https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${granularity}&start=${new Date(start * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}`;
     const rows = await fetchJSON(url);
     if (!Array.isArray(rows)) throw new Error('unexpected shape');
+    if (rows.length === 0) break; // ran past the start of history
     for (const r of rows) buckets.push({ t: r[0], close: r[4], volume: r[5] });
     end = start - granularity;
   }
@@ -188,4 +190,20 @@ function freshness(ageMs) {
   return 'stale';
 }
 
-module.exports = { getCandles, freshness, FRESH_MAX_MS, syntheticCandles };
+// Deep history for the BACKTEST only — separate from the live feed so page
+// loads stay fast. Coinbase BTC-USD goes back to ~2015; `years` deepens paging.
+// Falls back to the standard live feed (then synthetic) if the deep fetch fails.
+async function getDeepCandles({ years = 6 } = {}) {
+  const pages = Math.max(3, Math.ceil((years * 365) / 290) + 1);
+  try {
+    const candles = await withRetry(() => fromCoinbase(pages), { label: 'coinbase-deep', tries: 3 });
+    const lastT = candles[candles.length - 1].t * 1000;
+    log(`deep history from coinbase (${candles.length} candles, ${new Date(candles[0].t * 1000).toISOString().slice(0, 10)} -> ${new Date(lastT).toISOString().slice(0, 10)})`);
+    return { candles, source: 'coinbase', live: true, stale: false, ageMs: Date.now() - lastT, asOf: lastT };
+  } catch (e) {
+    log(`deep fetch failed (${e.message}); falling back to standard feed`);
+    return getCandles();
+  }
+}
+
+module.exports = { getCandles, getDeepCandles, freshness, FRESH_MAX_MS, syntheticCandles };
