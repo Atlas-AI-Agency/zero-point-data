@@ -8,6 +8,7 @@ const https = require('https');
 const { computeSignals, backtest } = require('./src/engine');
 const { stripeConfigured, createCheckoutSession } = require('./src/stripe');
 const { createSampleReportHandler } = require('./src/sample-report');
+const api = require('./src/api');
 
 const PORT = process.env.PORT || 4317;
 const PUBLIC = path.join(__dirname, 'public');
@@ -116,8 +117,16 @@ const sampleReportHandler = createSampleReportHandler(getFullSignal);
 
 // ---- http ------------------------------------------------------------------
 
+// documented public REST + WS API (see API.md). Reuses getSignal()'s cache.
+const apiV1 = api.createHandler(getSignal);
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host}`);
+
+  // /api/v1/* — dispatch to the versioned API module.
+  if (u.pathname.startsWith('/api/v1/')) {
+    if (await apiV1(req, res, u)) return;
+  }
 
   if (u.pathname === '/api/signal') {
     try {
@@ -181,6 +190,15 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
     res.end(buf);
   });
+});
+
+// WebSocket upgrades for /api/v1/stream (RFC6455, stdlib only).
+server.on('upgrade', (req, socket) => {
+  try {
+    api.handleUpgrade(getSignal, req, socket);
+  } catch (e) {
+    try { socket.destroy(); } catch (_) {}
+  }
 });
 
 server.listen(PORT, () => {
