@@ -7,6 +7,7 @@ const path = require('path');
 const https = require('https');
 const { computeSignals, backtest } = require('./src/engine');
 const { stripeConfigured, createCheckoutSession } = require('./src/stripe');
+const api = require('./src/api');
 
 const PORT = process.env.PORT || 4317;
 const PUBLIC = path.join(__dirname, 'public');
@@ -98,8 +99,16 @@ async function getSignal() {
 
 // ---- http ------------------------------------------------------------------
 
+// documented public REST + WS API (see API.md). Reuses getSignal()'s cache.
+const apiV1 = api.createHandler(getSignal);
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host}`);
+
+  // /api/v1/* — dispatch to the versioned API module.
+  if (u.pathname.startsWith('/api/v1/')) {
+    if (await apiV1(req, res, u)) return;
+  }
 
   if (u.pathname === '/api/signal') {
     try {
@@ -158,6 +167,15 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
+// WebSocket upgrades for /api/v1/stream (RFC6455, stdlib only).
+server.on('upgrade', (req, socket) => {
+  try {
+    api.handleUpgrade(getSignal, req, socket);
+  } catch (e) {
+    try { socket.destroy(); } catch (_) {}
+  }
+});
+
 server.listen(PORT, () => {
-  console.log(`Bitcoin Vector running on http://localhost:${PORT}`);
+  console.log(`Zero Point Data running on http://localhost:${PORT}`);
 });
