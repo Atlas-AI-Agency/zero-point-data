@@ -31,7 +31,7 @@ The report header includes a **SYNTHETIC DATA WARNING** — see Notes below.
 
 ## Version
 
-Branched from `e224746` (main, 2026-07-25)
+Branched from `e224746` (main, 2026-07-25) — synthetic harness verifies setup correctness only. Results are **not investment advice**, and numbers are intentionally divergent from real BTC volatility patterns for testing purposes.
 
 ---
 
