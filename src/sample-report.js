@@ -128,7 +128,7 @@ function buildReport(signal) {
     brand: 'Zero Point Data',
     kind: 'Sample Report',
     generatedAt: generatedAt || new Date().toISOString(),
-    dataSource: source === 'coingecko' ? 'live BTC/USD' : 'synthetic demo series',
+    dataSource: source === 'synthetic' ? 'synthetic demo series' : `live BTC/USD (source: ${source})`,
     disclaimer:
       'Sample report for informational purposes only. Not financial advice. ' +
       'Signals are model outputs that may be wrong; past performance does not guarantee future results.',
