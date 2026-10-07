@@ -136,7 +136,7 @@ Add model-governance docs (versioned model cards, change log), retain signal his
 ---
 
 ## Immediate next steps
-1. ✅ Rebrand shell to Zero Point Data, remove all Glassnode/Vector references *(pending — see note below)*.
+1. ✅ Rebrand shell to Zero Point Data, remove all Glassnode/Vector references *(pending)*.
 2. ✅ Scaffold Stripe Checkout from env vars *(this turn)*.
 3. Stand up Timescale + the daily market-data pipeline (Phase 1).
 4. Add the API (`/api/signal` is already the seed) + dashboard.
