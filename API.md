@@ -39,6 +39,14 @@ exceed, the server responds `429 Too Many Requests` with a `Retry-After` header.
 
 ## REST endpoints
 
+The endpoint examples use authenticated mode. Replace `YOUR_API_KEY` with a
+configured key. For credential-free local evaluation, keep `API_KEYS` unset and
+omit the header:
+
+```bash
+curl -s http://localhost:4317/api/v1/health
+```
+
 ### `GET /api/v1/signal/latest`
 
 The headline read: current regime, risk score, allocation, factor breakdown,
@@ -46,7 +54,7 @@ confidence, and timestamp.
 
 ```bash
 curl -s http://localhost:4317/api/v1/signal/latest \
-  -H "X-API-Key: key_alpha"
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ```json
@@ -74,7 +82,7 @@ Recent daily history. `days` defaults to `30` and is capped at `365`.
 
 ```bash
 curl -s "http://localhost:4317/api/v1/signal/history?days=7" \
-  -H "X-API-Key: key_alpha"
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ```json
@@ -95,7 +103,7 @@ The four regime definitions used by the engine.
 
 ```bash
 curl -s http://localhost:4317/api/v1/regimes \
-  -H "X-API-Key: key_alpha"
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ```json
@@ -115,7 +123,7 @@ curl -s http://localhost:4317/api/v1/regimes \
 Liveness probe and active data source.
 
 ```bash
-curl -s http://localhost:4317/api/v1/health -H "X-API-Key: key_alpha"
+curl -s http://localhost:4317/api/v1/health -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ```json
